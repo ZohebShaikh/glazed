@@ -17,6 +17,7 @@ use cli::{Cli, Commands};
 use tokio::select;
 use tokio::signal::unix::{SignalKind, signal};
 use tracing::info;
+use url::Url;
 
 use crate::clients::TiledClient;
 use crate::config::GlazedConfig;
@@ -44,14 +45,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 }
 
+#[derive(Clone)]
+pub struct RootAddress(Url);
+
 async fn serve(config: GlazedConfig) -> Result<(), Box<dyn std::error::Error>> {
     let client = TiledClient::new(config.tiled_client.address);
+    let public_address = config
+        .public_address
+        .clone()
+        .unwrap_or_else(|| Url::parse(&format!("http://{}", config.bind_address)).unwrap());
     let schema = Schema::build(TiledQuery, EmptyMutation, EmptySubscription)
-        .data(config.bind_address)
+        .data(RootAddress(public_address))
         .data(client.clone())
         .finish();
 
-    let graphql_endpoint = config.public_address.map(|u| u.to_string());
+    let graphql_endpoint = config
+        .public_address
+        .map(|u| u.join("graphql").unwrap().to_string());
 
     let app = Router::new()
         .route("/graphql", post(graphql_handler).get(graphql_get_warning))
