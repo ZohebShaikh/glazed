@@ -2,7 +2,7 @@ use async_graphql::{EmptyMutation, EmptySubscription, Schema};
 use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse};
 use axum::routing::{get, post};
-use axum::{Extension, Router};
+use axum::{Extension, Json, Router};
 
 mod cli;
 mod clients;
@@ -14,6 +14,7 @@ mod model;
 mod test_utils;
 
 use cli::{Cli, Commands};
+use serde_json::json;
 use tokio::select;
 use tokio::signal::unix::{SignalKind, signal};
 use tracing::info;
@@ -66,6 +67,10 @@ async fn serve(config: GlazedConfig) -> Result<(), Box<dyn std::error::Error>> {
     let app = Router::new()
         .route("/graphql", post(graphql_handler).get(graphql_get_warning))
         .route("/graphiql", get(|| graphiql_handler(graphql_endpoint)))
+        .route(
+            "/status",
+            get(Json(json!({"version": env!("CARGO_PKG_VERSION")}))),
+        )
         .route("/asset/{run}/{stream}/{det}/{id}", get(download_handler))
         .with_state(client)
         .fallback((
