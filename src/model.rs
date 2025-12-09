@@ -13,7 +13,7 @@ use serde_json::Value;
 use tracing::{info, instrument};
 
 use crate::RootAddress;
-use crate::clients::TiledClient;
+use crate::clients::{ClientError, TiledClient};
 use crate::handlers::AuthHeader;
 use crate::model::node::NodeAttributes;
 
@@ -28,6 +28,18 @@ impl TiledQuery {
 
     async fn instrument_session(&self, name: String) -> InstrumentSession {
         InstrumentSession { name }
+    }
+
+    async fn run(&self, ctx: &Context<'_>, id: String) -> Result<Option<Run>> {
+        let auth = ctx.data::<Option<AuthHeader>>()?;
+        let headers = auth.as_ref().map(AuthHeader::as_header_map);
+        match ctx.data::<TiledClient>()?.metadata(id, headers).await {
+            Ok(run) => Ok(Some(Run {
+                data: run.into_data(),
+            })),
+            Err(ClientError::TiledRequest(404, _)) => Ok(None),
+            Err(other) => Err(other.into()),
+        }
     }
 }
 

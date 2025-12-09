@@ -6,9 +6,12 @@ use serde_json::Value;
 
 use crate::model::{array, container, table};
 
+pub type Root = Response<Vec<DataOption>>;
+pub type Metadata = Response<Data>;
+
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
-pub struct Root {
-    data: Vec<DataOption>,
+pub struct Response<D> {
+    data: D,
     pub error: Value,
     pub links: Option<Links>,
     pub meta: Value,
@@ -20,6 +23,12 @@ impl Root {
     }
     pub fn into_data(self) -> impl Iterator<Item = Data> {
         self.data.into_iter().flat_map(DataOption::into_data)
+    }
+}
+
+impl Metadata {
+    pub fn into_data(self) -> Data {
+        self.data
     }
 }
 

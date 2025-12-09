@@ -69,6 +69,16 @@ impl TiledClient {
         self.request(&format!("api/v1/search/{}", path), headers, Some(query))
             .await
     }
+
+    pub async fn metadata(
+        &self,
+        id: String,
+        headers: Option<HeaderMap>,
+    ) -> ClientResult<node::Metadata> {
+        self.request(&format!("api/v1/metadata/{id}"), headers, None)
+            .await
+    }
+
     pub async fn table_full(
         &self,
         path: &str,
