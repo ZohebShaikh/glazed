@@ -30,7 +30,7 @@ impl TiledClient {
             address,
         }
     }
-    #[instrument(skip(self))]
+    #[instrument(skip(self, headers))]
     async fn request<T: DeserializeOwned>(
         &self,
         endpoint: &str,
@@ -46,9 +46,10 @@ impl TiledClient {
         if let Some(params) = query_params {
             request = request.query(&params);
         }
-        info!("Querying: {request:?}");
+        let request = request.build()?;
+        info!("Querying: {}", request.url());
 
-        let response = request.send().await?;
+        let response = self.client.execute(request).await?;
         let status = response.status().as_u16();
         let body = response.text().await?;
         match status {
