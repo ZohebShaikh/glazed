@@ -21,6 +21,10 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}}
 
+      - name: Set application version
+        if: ${{ github.ref_type == 'tag' }}
+        run: sed -i '0,/^version/s/^version = ".*"$/version = "${{ steps.meta.outputs.version }}"/' Cargo.toml
+
       - name: Setup buildx
         uses: docker/setup-buildx-action@v3
 
