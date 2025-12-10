@@ -1,3 +1,4 @@
+use askama::Template;
 use async_graphql::{EmptyMutation, EmptySubscription, Schema};
 use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse};
@@ -56,7 +57,7 @@ async fn serve(config: GlazedConfig) -> Result<(), Box<dyn std::error::Error>> {
         .clone()
         .unwrap_or_else(|| Url::parse(&format!("http://{}", config.bind_address)).unwrap());
     let schema = Schema::build(TiledQuery, EmptyMutation, EmptySubscription)
-        .data(RootAddress(public_address))
+        .data(RootAddress(public_address.clone()))
         .data(client.clone())
         .finish();
 
@@ -75,7 +76,11 @@ async fn serve(config: GlazedConfig) -> Result<(), Box<dyn std::error::Error>> {
         .with_state(client)
         .fallback((
             StatusCode::NOT_FOUND,
-            Html(include_str!("../static/404.html")),
+            Html(
+                NotFound::from_public_address(public_address.clone())
+                    .render()
+                    .expect("Rendering to a string shouldn't fail"),
+            ),
         ))
         .layer(Extension(schema));
 
@@ -85,6 +90,22 @@ async fn serve(config: GlazedConfig) -> Result<(), Box<dyn std::error::Error>> {
     Ok(axum::serve(listener, app)
         .with_graceful_shutdown(signal_handler())
         .await?)
+}
+
+#[derive(Template)]
+#[template(path = "404.html")]
+struct NotFound {
+    graphql_address: Url,
+    graphiql_address: Url,
+}
+
+impl NotFound {
+    fn from_public_address(add: Url) -> Self {
+        Self {
+            graphql_address: add.join("graphql").unwrap(),
+            graphiql_address: add.join("graphiql").unwrap(),
+        }
+    }
 }
 
 async fn graphql_get_warning() -> impl IntoResponse {

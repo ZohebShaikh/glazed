@@ -12,15 +12,16 @@ RUN rustup target add x86_64-unknown-linux-musl && \
 # This downloads and builds the dependencies early allowing built dependencies
 # to be cached.
 RUN mkdir src && echo 'fn main() {}' > src/main.rs
-COPY Cargo.toml Cargo.lock ./  
+COPY Cargo.toml Cargo.lock ./
 
-RUN --mount=type=cache,target=/usr/local/cargo/registry cargo build --release --target x86_64-unknown-linux-musl 
+RUN --mount=type=cache,target=/usr/local/cargo/registry cargo build --release --target x86_64-unknown-linux-musl
 
-COPY static ./static
-COPY src ./src
+COPY ./static ./static
+COPY ./src ./src
+COPY ./templates ./templates
 
 RUN --mount=type=cache,target=/usr/local/cargo/registry <<EOF
-    set -e 
+    set -e
     # update timestamps to force a new build
     touch src/main.rs
     cargo build --release --locked --target x86_64-unknown-linux-musl
