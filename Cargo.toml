@@ -4,6 +4,7 @@ name = "glazed"
 # CI build process so that the version always matches the latest git tag.
 version = "0.0.0"
 edition = "2024"
+license = "Apache-2.0"
 
 [dependencies]
 async-graphql = { version = "7.0.17", features = ["uuid"]}
