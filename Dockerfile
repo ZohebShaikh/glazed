@@ -12,14 +12,27 @@ RUN rustup target add x86_64-unknown-linux-musl && \
 # This downloads and builds the dependencies early allowing built dependencies
 # to be cached.
 RUN mkdir src && echo 'fn main() {}' > src/main.rs
-COPY ./Cargo.toml ./Cargo.toml
-COPY ./Cargo.lock ./Cargo.lock
-RUN cargo build --release --target x86_64-unknown-linux-musl
+COPY Cargo.toml Cargo.lock ./  
 
-COPY ./static ./static
-COPY ./src ./src
+RUN --mount=type=cache,target=/usr/local/cargo/registry cargo build --release --target x86_64-unknown-linux-musl 
 
-RUN touch src/main.rs && cargo build --release --target x86_64-unknown-linux-musl
+COPY static ./static
+COPY src ./src
 
-ENTRYPOINT ["/build/target/x86_64-unknown-linux-musl/release/glazed"]
+RUN --mount=type=cache,target=/usr/local/cargo/registry <<EOF
+    set -e 
+    # update timestamps to force a new build
+    touch src/main.rs
+    cargo build --release --locked --target x86_64-unknown-linux-musl
+EOF
+
+FROM alpine:3.23
+
+COPY --from=build /build/target/x86_64-unknown-linux-musl/release/glazed glazed
+
+RUN adduser -u 65532 -D -H nonroot
+
+USER nonroot
+
+ENTRYPOINT ["/glazed"]
 CMD ["serve"]
