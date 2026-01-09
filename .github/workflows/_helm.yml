@@ -23,6 +23,8 @@ jobs:
 
       - name: Install helm
         uses: Azure/setup-helm@v4
+        with:
+          version: "v4.0.4"
 
       - name: Login to chart registry
         run: |
