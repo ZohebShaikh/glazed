@@ -1,4 +1,3 @@
-use askama::Template;
 use async_graphql::{EmptyMutation, EmptySubscription, Schema};
 use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse};
@@ -74,14 +73,7 @@ async fn serve(config: GlazedConfig) -> Result<(), Box<dyn std::error::Error>> {
         )
         .route("/asset/{run}/{stream}/{det}/{id}", get(download_handler))
         .with_state(client)
-        .fallback((
-            StatusCode::NOT_FOUND,
-            Html(
-                NotFound::from_public_address(public_address.clone())
-                    .render()
-                    .expect("Rendering to a string shouldn't fail"),
-            ),
-        ))
+        .fallback((StatusCode::NOT_FOUND, not_found_page(&public_address)))
         .layer(Extension(schema));
 
     let listener = tokio::net::TcpListener::bind(config.bind_address).await?;
@@ -92,20 +84,14 @@ async fn serve(config: GlazedConfig) -> Result<(), Box<dyn std::error::Error>> {
         .await?)
 }
 
-#[derive(Template)]
-#[template(path = "404.html")]
-struct NotFound {
-    graphql_address: Url,
-    graphiql_address: Url,
-}
-
-impl NotFound {
-    fn from_public_address(add: Url) -> Self {
-        Self {
-            graphql_address: add.join("graphql").unwrap(),
-            graphiql_address: add.join("graphiql").unwrap(),
-        }
-    }
+fn not_found_page(public_address: &Url) -> Html<String> {
+    let graphql = public_address.join("graphql").unwrap();
+    let graphiql = public_address.join("graphiql").unwrap();
+    Html(format!(
+        include_str!("../templates/404.html"),
+        graphql_address = graphql,
+        graphiql_address = graphiql
+    ))
 }
 
 async fn graphql_get_warning() -> impl IntoResponse {
